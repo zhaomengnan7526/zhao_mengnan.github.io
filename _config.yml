@@ -3,15 +3,15 @@ title: Z Blog
 SEOTitle: 赵梦楠的博客 | Z Blog
 header-img: img/post-bg-desk.jpg
 email: 752666541@qq.com
-description: "Every failure is leading towards success."
-keyword: "Z,Z Blog,赵梦楠的博客,zhaomengnan,赵梦楠, iOS, Apple, iPhone"
+description: "Great hopes make great man."
+keyword: "Z, Z Blog, 赵梦楠的博客, zhaomengnan, 赵梦楠, iOS, Apple, iPhone, 互联网, 博客, 个人网站,"
 url: "http://zhaomengnan7526.github.io"          # your host, for absolute URL
 baseurl: ""      # for example, '/blog' if your blog hosted on 'host/blog'
 github_repo: "https://github.com/qiubaiying/qiubaiying.github.io.git" # you code repository
 
 # Sidebar settings
 sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "Goals determine what you going to be!"
+sidebar-about-description: "一个修行中的iOS开发者"
 sidebar-avatar: /img/about-BY-gentle.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
@@ -56,7 +56,7 @@ kramdown:
 
 # 评论系统
 # Disqus settings（https://disqus.com/）
-disqus_username: qiubaiying
+disqus_username: zhaomengnan
 
 # 多说 将于2017年6月1日正式关停服务，建议使用 Disqus（http://dev.duoshuo.com/threads/58d1169ae293b89a20c57241）
 # Duoshuo settings
