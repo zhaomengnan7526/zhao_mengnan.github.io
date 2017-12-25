@@ -23,7 +23,7 @@ zhihu_username:      zhao-meng-nan-39
 github_username:     zhaomengnan7526
 #facebook_username:  
 jianshu_username:    f143e24472aa
-#twitter_username:  
+twitter_username:    ZHAO_Mengnan
 
 
 
@@ -81,7 +81,7 @@ disqus_username: zhaomengnan
 
 # Featured Tags
 featured-tags: true                     # 是否使用首页标签
-featured-condition-size: 1              # 相同标签数量大于这个数，才会出现在首页
+featured-condition-size: 0              # 相同标签数量大于这个数，才会出现在首页
 
 
 
@@ -94,7 +94,7 @@ service-worker: true
 # Friends
 friends: [
     {
-        title: "简书·Z",
+        title: "简书·赵梦楠",
         href: "http://www.jianshu.com/u/f143e24472aa"
     },{
         title: "Apple",
