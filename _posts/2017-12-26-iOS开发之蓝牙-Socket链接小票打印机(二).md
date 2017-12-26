@@ -14,7 +14,6 @@ tags:
     - ESC/POS
 --- 
 
-![](http://upload-images.jianshu.io/upload_images/1612722-3828eb260c13fcea.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
 
 ## 前言
 
