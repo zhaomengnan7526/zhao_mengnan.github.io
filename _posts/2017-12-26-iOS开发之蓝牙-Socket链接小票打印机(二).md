@@ -175,21 +175,20 @@ CBConnectPeripheralOptionNotifyOnNotificationKey;接收到外设通知时Alert�
     for (CBCharacteristic * cha in service.characteristics)
     {
         CBCharacteristicProperties p = cha.properties;
-        if (p & CBCharacteristicPropertyBroadcast) {
+        if (p & CBCharacteristicPropertyBroadcast) {//广播特征
             
         }
-        if (p & CBCharacteristicPropertyRead) {
+        if (p & CBCharacteristicPropertyRead) {//读取特征
             self.characteristicRead = cha;
         }
-        if (p & CBCharacteristicPropertyWriteWithoutResponse) {
+        if (p & CBCharacteristicPropertyWriteWithoutResponse) {//无反馈写入特征
+
+        }
+        if (p & CBCharacteristicPropertyWrite) {//有反馈写入特征
             self.peripheral = peripheral;
             self.characteristicInfo = cha;
         }
-        if (p & CBCharacteristicPropertyWrite) {
-            self.peripheral = peripheral;
-            self.characteristicInfo = cha;
-        }
-        if (p & CBCharacteristicPropertyNotify) {              
+        if (p & CBCharacteristicPropertyNotify) {//通知特征             
                 self.characteristicNotify = cha;
                 [self.peripheral setNotifyValue:YES forCharacteristic:self.characteristicNotify];
             NSLog(@"characteristic uuid:%@  value:%@",cha.UUID,cha.value);
@@ -200,9 +199,61 @@ CBConnectPeripheralOptionNotifyOnNotificationKey;接收到外设通知时Alert�
 }
 
 ```
+当扫描到写入特征时，保存，用于写入数据。
+
+#### 6. 写入数据
+写入数据，我们只需要调用方法
+
+```
+[self.peripheral writeValue:subData forCharacteristic:self.characteristicInfo type:CBCharacteristicWriteWithResponse];
+```
+这里的`self.peripheral`就是连接的外设，`self.characteristicInfo `就是之前保存的写入特征；这里最好使用`CBCharacteristicPropertyWrite`特征，并且`type`选择`CBCharacteristicWriteWithResponse `。当写入数据成功后，系统会通过下面这个方法通知我们：
+
+```
+-(void)peripheral:(CBPeripheral *)peripheral didWriteValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
+    if (error) {
+        NSLog(@"＝＝＝＝error%@",error);
+    }else{
+        NSLog(@"＝＝＝＝打印成功  %@", characteristic);
+    }
+    
+}
+```
 
 
+由于蓝牙设备每次可写入的数据量是有限制的，因此，我们需要将之前拼接的打印数据进行拆分，分批发送给打印机
 
+```
+- (void)printLongData:(NSData *)printContent{
+    NSUInteger cellMin;
+    NSUInteger cellLen;
+    //数据长度
+    NSUInteger strLength = [printContent length];
+    if (strLength < 1) {
+        return;
+    }
+    //MAX_CHARACTERISTIC_VALUE_SIZE = 120
+    NSUInteger cellCount = (strLength % MAX_CHARACTERISTIC_VALUE_SIZE) ? (strLength/MAX_CHARACTERISTIC_VALUE_SIZE + 1):(strLength/MAX_CHARACTERISTIC_VALUE_SIZE);
+    for (int i = 0; i < cellCount; i++) {
+        cellMin = i*MAX_CHARACTERISTIC_VALUE_SIZE;
+        if (cellMin + MAX_CHARACTERISTIC_VALUE_SIZE > strLength) {
+            cellLen = strLength-cellMin;
+        }
+        else {
+            cellLen = MAX_CHARACTERISTIC_VALUE_SIZE;
+        }
+        NSRange rang = NSMakeRange(cellMin, cellLen);
+        //        截取打印数据
+        NSData *subData = [printContent subdataWithRange:rang];
+        //循环写入数据
+        [self.peripheral writeValue:subData forCharacteristic:self.characteristicInfo type:CBCharacteristicWriteWithResponse];
+    }
+}
+
+```
+这里的`MAX_CHARACTERISTIC_VALUE_SIZE`是个宏定义，表示每次发送的数据长度，经笔者测试，当`MAX_CHARACTERISTIC_VALUE_SIZE = 20`时，打印文字是正常速度。但打印图片的速度非常慢，**应该在硬件允许的范围内，每次发尽量多的数据。**不同品牌型号的打印机，这个参数是不同的，笔者的蓝牙打印机该值最多到140。超出后会出现无法打印问题。**最后笔者将该值定为`MAX_CHARACTERISTIC_VALUE_SIZE = 120`，测试了公司几台打印机都没有问题。**
+
+另外iOS9以后增加了方法`maximumWriteValueLengthForType:`可以获取写入特诊的最大写入数据量，但经笔者测试，对于部分打印机（比如我们公司的）是不准确的，因此，不要太依赖此方法，最好还是自己取一个合适的值。
 
 ## Socket链接小票打印机
 
