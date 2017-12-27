@@ -18,7 +18,7 @@ tags:
 
 ## 前言
 
-[上一篇](https://zhaomengnan.top/2017/12/19/iOS开发之蓝牙小票打印机(一)/)主要介绍了部分ESC/POS指令集，包括一些常用的排版指令，打印位图指令等。另外，还介绍了将图片转换成点阵图的方法。在这篇文章中，将主要介绍通过蓝牙连接打印机，发送打印指令相关知识。
+[上一篇](https://zhaomengnan.top/2017/12/19/iOS开发之蓝牙小票打印机(一)/)主要介绍了部分ESC/POS指令集，包括一些常用的排版指令，打印位图指令等。另外，还介绍了将图片转换成点阵图的方法。在这篇文章中，将主要介绍通过蓝牙和Socket连接打印机，发送打印指令相关知识。这里将用到`CoreBluetooth.framework `和`CocoaAsyncSocket`。
 
 ## 蓝牙链接小票打印机
 
@@ -215,12 +215,11 @@ CBConnectPeripheralOptionNotifyOnNotificationKey;接收到外设通知时Alert�
     if (error) {
         NSLog(@"＝＝＝＝error%@",error);
     }else{
-        NSLog(@"＝＝＝＝打印成功  %@", characteristic);
+        NSLog(@"＝＝＝＝写入成功  %@", characteristic);
     }
     
 }
 ```
-
 
 由于蓝牙设备每次可写入的数据量是有限制的，因此，我们需要将之前拼接的打印数据进行拆分，分批发送给打印机
 
@@ -256,8 +255,104 @@ CBConnectPeripheralOptionNotifyOnNotificationKey;接收到外设通知时Alert�
 
 另外iOS9以后增加了方法`maximumWriteValueLengthForType:`可以获取写入特诊的最大写入数据量，但经笔者测试，对于部分打印机（比如我们公司的）是不准确的，因此，不要太依赖此方法，最好还是自己取一个合适的值。
 
+**注意：每个打印机都有一个缓冲区，缓冲区的大小视品牌型号有所不同。打印机的打印速度有限，如果我们瞬间发送大量的数据给打印机，会造成打印机缓冲区满。缓冲区满后，如继续写入，可能会出现数据丢失，打印乱码。**
+
 ## Socket链接小票打印机
 
+### 简介
+这里使用[CocoaAsyncSocket](https://github.com/robbiehanson/CocoaAsyncSocket)开源框架，与打印机进行`Socket`连接。`CocoaAsyncSocket`中主要包含两个类:
+
+- `GCDAsyncSocket`:用GCD搭建的基于TCP/IP协议的socket网络库;
+- `GCDAsyncUdpSocket `:用GCD搭建的基于UDP/IP协议的socket网络库。
+
+这里我们只用到`GCDAsyncSocket`，因此只需要将`GCDAsyncSocket.h`和`GCDAsyncSocket.m`两个文件导入项目。
+
+**注意：手机和打印机必须在同一局域网下，设置到打印机的host和port。**
+
+### 步骤
+
+#### 1、遵循`GCDAsyncSocketDelegate`协议
+
+```
+@interface MNSocketManager()<GCDAsyncSocketDelegate>
+```
+
+#### 2、声明属性
+
+```
+@property (nonatomic, strong) GCDAsyncSocket *asyncSocket;
+```
+
+#### 3、初始化`GCDAsyncSocket `对象
+
+```
+self.asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+```
+
+#### 4、连接打印机
+
+```
+NSError *error = nil;
+[self.asyncSocket connectToHost:host onPort:port withTimeout:timeout error:&error];
+```
+连接成功后会通过代理回调
+
+```
+- (void)socket:(GCDAsyncSocket *)sock didConnectToHost:(NSString *)host port:(uint16_t)port {
+    
+}
+```
+
+#### 5、发送数据给打印机
+
+Timeout为负，表示不设置超时时间。这里的data就是[上一篇](https://zhaomengnan.top/2017/12/19/iOS开发之蓝牙小票打印机(一)/)中拼接的打印数据。
+
+```
+[self.asyncSocket writeData:data withTimeout:-1 tag:0];
+```
+写入完成后回调
+
+```
+- (void)socket:(GCDAsyncSocket *)sock didWriteDataWithTag:(long)tag {
+    NSLog(@"写入完成");
+}
+```
+
+#### 6、断开连接
+断开连接有以下几种方法
+
+```
+[self.asyncSocket disconnect];
+[self.asyncSocket disconnectAfterReading];
+[self.asyncSocket disconnectAfterWriting];
+[self.asyncSocket disconnectAfterReadingAndWriting];
+```
+连接断开后回调
+
+```
+- (void)socketDidDisconnect:(GCDAsyncSocket *)sock withError:(NSError *)err {
+    NSLog(@"连接断开");
+
+}
+```
+
+#### 7、读取数据
+
+读取到数据会回调
+
+```
+- (void)socket:(GCDAsyncSocket *)sock didReadData:(NSData *)data withTag:(long)tag {
+    NSLog(@"读取完成");
+}
+
+```
+网口打印机一般都支持状态查询，查询指令如下：
+![打印机状态查询指令](https://ws1.sinaimg.cn/large/006tKfTcly1fmvdo2erxtj30lq0t4go6.jpg)
+
+可以通过[上一篇](https://zhaomengnan.top/2017/12/19/iOS开发之蓝牙小票打印机(一)/)介绍指令拼接方法，查询打印机的状态。
+
+## 总结
+本篇只是简单介绍了，通过蓝牙和Socket连接打印机的方法。虽然可以初步完成连接和打印，但是，在真正的项目中使用还是远远不够的。这里还有很多情况需要考虑，比如连接断开、打印机异常、打印机缓冲区满、打印机缺纸等。我们可以针对自身的业务情况，进行相应的处理。
 
 ## 参考
 [Core Bluetooth Programming Guide](https://developer.apple.com/library/content/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/AboutCoreBluetooth/Introduction.html#//apple_ref/doc/uid/TP40013257-CH1-SW1)
